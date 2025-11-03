@@ -216,4 +216,186 @@
     })
 
   </script></body>
+          </html>      <label>Choose visits per hour (number)</label>
+      <input id="visitsPerHour" type="number" min="1" value="10" />
+      <div class="small">Har ek ghante ke liye yeh visits generate honge (simulation)</div>
+    </div>
+
+    <div>
+      <label>How many hours to run</label>
+      <input id="hours" type="number" min="1" value="4" />
+      <div class="small">Total hours ke liye schedule banega</div>
+    </div>
+
+    <div class="full">
+      <label>Select country / countries (hold Ctrl / Cmd for multi-select)</label>
+      <select id="countries" multiple size="6">
+        <option value="ALL">All Countries (random)</option>
+        <option value="IN">India</option>
+        <option value="US">United States</option>
+        <option value="PK">Pakistan</option>
+        <option value="BD">Bangladesh</option>
+        <option value="GB">United Kingdom</option>
+        <option value="ID">Indonesia</option>
+        <option value="NG">Nigeria</option>
+        <option value="PH">Philippines</option>
+        <option value="RU">Russia</option>
+        <option value="TR">Turkey</option>
+        <option value="BR">Brazil</option>
+        <option value="DE">Germany</option>
+        <option value="FR">France</option>
+        <option value="EG">Egypt</option>
+        <option value="Other">Other</option>
+      </select>
+      <div class="small">Agar <strong>All Countries</strong> choose kiya, toh generator random countries assign karega.</div>
+    </div>
+
+    <div>
+      <label>IP Variety</label>
+      <select id="ipVariety">
+        <option value="random">Random different IPs</option>
+        <option value="same">Same IP (single)</option>
+      </select>
+      <div class="small">Simulation me IPs kaise dikhna chahiye</div>
+    </div>
+
+    <div>
+      <label>Campaign label (optional)</label>
+      <input id="campaign" type="text" placeholder="e.g. promo_1" />
+    </div>
+
+    <div class="full">
+      <label>Target URL (paste here)</label>
+      <input id="targetUrl" type="text" placeholder="https://example.com/page-to-send-traffic" />
+    </div>
+
+    <div class="full">
+      <label>Extra notes / custom UA (optional)</label>
+      <textarea id="notes" rows="2" placeholder="E.g. Prefer mobile-only, custom user-agent... (simulated)"></textarea>
+    </div>
+
+    <div class="full" style="display:flex;gap:10px;align-items:center">
+      <button id="generateBtn">Generate Schedule</button>
+      <button id="downloadBtn" style="background:#9bd7ff;color:#012;display:none">Download CSV</button>
+      <div class="muted" style="margin-left:auto">Preview only — no network requests sent.</div>
+    </div>
+
+  </div>
+
+  <div id="result" class="preview" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <span class="chip">Total hits: <span id="totalHits">0</span></span>
+        <span class="chip">Hours: <span id="outHours">0</span></span>
+        <span class="chip">Campaign: <span id="outCampaign">-</span></span>
+      </div>
+      <div class="small">Note: This is a simulated schedule table (timestamps, country, IP)</div>
+    </div>
+
+    <div style="height:10px"></div>
+    <table id="tableOut">
+      <thead><tr><th>#</th><th>Timestamp (sim)</th><th>Country</th><th>IP</th><th>Target URL</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    Important: Yeh tool <strong>sirf UI &amp; schedule generator</strong> hai. Main intentionally koi code nahi likha jo remote servers par automated requests bheje. Automated traffic generation jo kisi site ke analytics ko manipulate kare — woh unethical aur platform terms-of-service ka violation ho sakta hai. Agar tum real traffic chahte ho, toh legitimate channels use karo (SEO, paid ads, partnerships, content syndication).
+  </div>
+
+</div>
+
+  </div>  <script>
+    // Utility: random IPv4
+    function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min }
+    function randomIP(){ return randInt(1,255)+'.'+randInt(0,255)+'.'+randInt(0,255)+'.'+randInt(1,254) }
+
+    // Country code to nice name (partial list)
+    const countryNames = {
+      'IN':'India','US':'United States','PK':'Pakistan','BD':'Bangladesh','GB':'United Kingdom','ID':'Indonesia','NG':'Nigeria','PH':'Philippines','RU':'Russia','TR':'Turkey','BR':'Brazil','DE':'Germany','FR':'France','EG':'Egypt','Other':'Other'
+    }
+
+    function chooseCountry(selected){
+      if(selected.length===0) return ['Other']
+      if(selected.includes('ALL')){
+        // pick random country from list (excluding ALL)
+        const keys = Object.keys(countryNames)
+        return [keys[randInt(0,keys.length-1)]]
+      }
+      return selected
+    }
+
+    document.getElementById('generateBtn').addEventListener('click', ()=>{
+      const visitsPerHour = parseInt(document.getElementById('visitsPerHour').value)||0
+      const hours = parseInt(document.getElementById('hours').value)||0
+      const targetUrl = document.getElementById('targetUrl').value.trim()
+      const campaign = document.getElementById('campaign').value.trim() || '-'
+      const ipMode = document.getElementById('ipVariety').value
+      const notes = document.getElementById('notes').value
+
+      // Collect selected countries
+      const sel = Array.from(document.getElementById('countries').selectedOptions).map(o=>o.value)
+      const countries = sel.length?sel:['Other']
+
+      // Basic validation
+      if(!targetUrl){ alert('Paste the target URL first.'); return }
+      if(visitsPerHour<=0 || hours<=0){ alert('Enter valid visits per hour and hours.'); return }
+      if(visitsPerHour*hours > 20000){ if(!confirm('You are generating a big schedule ('+(visitsPerHour*hours)+' hits). Continue?')) return }
+
+      // Build schedule
+      const rows = []
+      let counter = 0
+      const now = new Date()
+      for(let h=0; h<hours; h++){
+        for(let v=0; v<visitsPerHour; v++){
+          counter++
+          // timestamp: spread within the hour
+          const t = new Date(now.getTime() + h*3600*1000 + randInt(0,3599)*1000)
+          // pick country
+          const chosen = chooseCountry(countries)
+          const country = chosen[ randInt(0, chosen.length-1) ]
+          // ip
+          let ip = ipMode==='same'? '203.0.113.42' : randomIP()
+          // optionally add small location hint
+          const cname = countryNames[country] || country
+          rows.push({id:counter, ts:t.toISOString(), country:cname, ip:ip, url:targetUrl, campaign:campaign, notes:notes})
+        }
+      }
+
+      // Render table
+      const tbody = document.querySelector('#tableOut tbody')
+      tbody.innerHTML=''
+      rows.forEach(r=>{
+        const tr = document.createElement('tr')
+        tr.innerHTML = `<td>${r.id}</td><td>${r.ts}</td><td>${r.country}</td><td>${r.ip}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">${r.url}</td>`
+        tbody.appendChild(tr)
+      })
+
+      document.getElementById('totalHits').innerText = rows.length
+      document.getElementById('outHours').innerText = hours
+      document.getElementById('outCampaign').innerText = campaign
+      document.getElementById('result').style.display = 'block'
+
+      // Prepare CSV content for download
+      const csvRows = []
+      csvRows.push(['id','timestamp','country','ip','url','campaign','notes'].join(','))
+      rows.forEach(r=>{
+        // escape commas
+        const line = [r.id, r.ts, '"'+r.country+'"', r.ip, '"'+r.url+'"', r.campaign, '"'+(r.notes||'')+'"'].join(',')
+        csvRows.push(line)
+      })
+      const csvData = csvRows.join('\n')
+
+      // Attach download
+      const dl = document.getElementById('downloadBtn')
+      dl.style.display='inline-block'
+      dl.onclick = ()=>{
+        const blob = new Blob([csvData], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'traffic_schedule.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      }
+
+    })
+
+  </script></body>
   </html>
