@@ -1,40 +1,260 @@
 <!doctype html>
-
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Traffic Planner UI — Simulator</title>
-  <style>
-    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa7bf;--accent:#7dd3fc}
-    body{font-family:Inter,system-ui,Arial;margin:0;background:linear-gradient(180deg,#071122 0%, #0b1220 100%);color:#e6eef8}
-    .container{max-width:980px;margin:32px auto;padding:24px}
-    .card{background:rgba(255,255,255,0.03);border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
-    h1{margin:0 0 12px;font-size:20px}
-    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
-    input[type="number"], input[type="text"], select, textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:inherit;font-size:14px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .full{grid-column:1/-1}
-    .row{display:flex;gap:8px;align-items:center}
-    button{background:var(--accent);border:none;padding:10px 14px;border-radius:10px;cursor:pointer;color:#012;font-weight:600}
-    .muted{color:var(--muted);font-size:13px}
-    .small{font-size:12px;color:var(--muted)}
-    .preview{margin-top:14px;max-height:320px;overflow:auto;border-radius:8px;padding:10px;background:rgba(0,0,0,0.2)}
-    table{width:100%;border-collapse:collapse;color:inherit}
-    th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:left;font-size:13px}
-    .note{margin-top:12px;padding:10px;border-radius:8px;background:rgba(125,211,252,0.06);color:var(--muted)}
-    .chip{display:inline-block;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.02);margin-right:6px;font-size:12px}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Safe Traffic Simulator — Full</title>
+<style>
+  :root{--bg:#0b1220;--card:#071124;--muted:#a9b6c6;--accent:#7dd3fc}
+  body{font-family:Inter,system-ui,Arial;margin:0;background:linear-gradient(180deg,#041022,#071124);color:#eaf4ff}
+  .wrap{max-width:1100px;margin:20px auto;padding:18px}
+  .card{background:rgba(255,255,255,0.03);padding:14px;border-radius:10px;margin-bottom:12px}
+  h1,h2{margin:0 0 8px}
+  label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+  input,select,textarea,button{font-size:14px}
+  input[type="number"], input[type="text"], select, textarea{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:inherit}
+  .grid{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .small{font-size:12px;color:var(--muted)}
+  .btn{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;cursor:pointer;color:#022;font-weight:700}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:left}
+  .country-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
+  .chip{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(125,211,252,0.06);font-weight:600}
+  .danger{background:rgba(255,80,80,0.06);padding:8px;border-radius:8px;color:#ffb3b3}
+  .events{max-height:160px;overflow:auto;background:rgba(0,0,0,0.06);padding:8px;border-radius:8px}
+</style>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <h1>Traffic Planner UI — Simulator</h1>
-      <p class="muted">Yeh frontend tool **sirf simulation ke liye** hai — yeh kisi bhi target URL par real automated hits nahi bhejta. Agar aapko real traffic bhejna hai, toh ads/SEO/affiliate methods use karein aur target site ki terms-of-service follow karein.</p><div style="height:12px"></div>
+<div class="wrap">
+  <div class="card">
+    <h1>Safe Traffic Simulator — Full</h1>
+    <div class="small">Ye tool <strong>sirf simulation</strong> karta hai — koi bhi real HTTP requests ya redirects nahi bhejta. Use for planning/testing only.</div>
+  </div>
 
   <div class="grid">
+    <!-- Controls -->
+    <div class="card">
+      <h2>Controls</h2>
+      <div class="cols">
+        <div>
+          <label>Duration (minutes)</label>
+          <input id="duration" type="number" min="1" value="60"/>
+          <div class="small">Total simulated run time</div>
+        </div>
+        <div>
+          <label>Views per minute</label>
+          <input id="vpm" type="number" min="1" value="10"/>
+          <div class="small">Average simulated views per minute</div>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <label>Per-country allocation (enter desired total views from each)</label>
+      <div id="countryAlloc" style="padding:8px;border-radius:8px;background:rgba(0,0,0,0.06);max-height:220px;overflow:auto"></div>
+
+      <div style="height:10px"></div>
+
+      <label>Target URL</label>
+      <input id="target" type="text" placeholder="https://example.com/landing"/>
+
+      <div style="height:10px"></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="genBtn" class="btn">Generate Random Short URL</button>
+        <button id="startBtn" class="btn">Start Simulation</button>
+        <button id="stopBtn" class="btn" style="display:none;background:#ffd27d">Stop</button>
+        <button id="exportBtn" class="btn" style="margin-left:auto;background:#9bd7ff;color:#012;display:none">Export CSV</button>
+      </div>
+
+      <div style="height:10px"></div>
+      <div id="genInfo" class="small">No campaign generated yet.</div>
+      <div style="height:10px"></div>
+      <div class="danger">Reminder: I won't provide code that sends fake hits to other sites or hides/refers them through Cloudflare/analytics bypass.</div>
+    </div>
+
+    <!-- Dashboards -->
     <div>
-      <label>Choose visits per hour (number)</label>
+      <div class="card">
+        <h2>Overview</h2>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="chip">Total Views: <span id="totalViews">0</span></div>
+          <div class="chip">Generated URLs: <span id="numURLs">0</span></div>
+          <div class="chip">Active Campaign: <span id="activeCamp">-</span></div>
+        </div>
+        <div style="height:10px"></div>
+
+        <h3 style="margin-bottom:6px">Per-country live</h3>
+        <table>
+          <thead><tr><th>Country</th><th>Views</th><th>Last IP (sim)</th></tr></thead>
+          <tbody id="countryTable"></tbody>
+        </table>
+
+        <div style="height:10px"></div>
+        <div class="small">Recent events:</div>
+        <div class="events" id="events"></div>
+      </div>
+
+      <div class="card">
+        <h3>Generated Short URLs</h3>
+        <table>
+          <thead><tr><th>Short URL</th><th>Target</th><th>Views</th><th>Action</th></tr></thead>
+          <tbody id="urlsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === Data & helpers ===
+const COUNTRIES = ['IN','US','GB','PK','BD','ID','NG','PH','BR','DE','FR','TR','EG','Other'];
+const CNAME = {IN:'India',US:'United States',GB:'United Kingdom',PK:'Pakistan',BD:'Bangladesh',ID:'Indonesia',NG:'Nigeria',PH:'Philippines',BR:'Brazil',DE:'Germany',FR:'France',TR:'Turkey',EG:'Egypt',Other:'Other'};
+const IPP = {IN:['103.','106.','122.'],US:['3.','13.','52.'],GB:['51.','88.'],PK:['39.','42.'],BD:['103.100.','103.101.'],ID:['36.','103.199.'],NG:['102.','105.'],PH:['112.','118.'],BR:['191.','200.'],DE:['80.','88.'],FR:['51.','62.'],TR:['88.','94.'],EG:['102.','197.'],Other:['185.']};
+
+let state = {running:false,interval:null,events:[],urls:[],globalCounts:{},total:0,currentCampaignId:null};
+
+// render per-country input rows
+const allocDiv = document.getElementById('countryAlloc');
+COUNTRIES.forEach(cc=>{
+  const row = document.createElement('div'); row.className='country-row';
+  const lbl = document.createElement('div'); lbl.style.width='90px'; lbl.innerText = CNAME[cc];
+  const inp = document.createElement('input'); inp.type='number'; inp.value='0'; inp.min='0'; inp.dataset.cc=cc; inp.style.flex='1';
+  row.appendChild(lbl); row.appendChild(inp);
+  allocDiv.appendChild(row);
+});
+
+// helpers
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+function genIP(cc){ const p = IPP[cc]||IPP['Other']; return p[randInt(0,p.length-1)] + randInt(0,255)+'.'+randInt(0,255); }
+function shortPath(){ const ch='abcdefghijklmnopqrstuvwxyz0123456789'; let s=''; for(let i=0;i<6;i++) s+=ch[randInt(0,ch.length-1)]; return '/r/'+s; }
+function updateOverview(){ document.getElementById('totalViews').innerText = state.total; document.getElementById('numURLs').innerText = state.urls.length; document.getElementById('activeCamp').innerText = state.currentCampaignId || '-'; }
+function renderCountryTable(){
+  const tbody = document.getElementById('countryTable'); tbody.innerHTML='';
+  COUNTRIES.forEach(cc=>{
+    const tr = document.createElement('tr');
+    const cnt = state.globalCounts[cc]||0;
+    const lastIp = state.lastIp && state.lastIp[cc] ? state.lastIp[cc] : '-';
+    tr.innerHTML = `<td>${CNAME[cc]}</td><td>${cnt}</td><td>${lastIp}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+function renderURLs(){
+  const t = document.getElementById('urlsTable'); t.innerHTML='';
+  state.urls.forEach(u=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="max-width:260px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${u.short}</td><td style="max-width:300px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${u.target}</td><td>${u.views}</td><td><button onclick="showDetails('${u.id}')" style="padding:6px;border-radius:6px;border:none;background:rgba(255,255,255,0.03);cursor:pointer">Details</button></td>`;
+    t.appendChild(tr);
+  });
+}
+window.showDetails = function(id){
+  const u = state.urls.find(x=>x.id===id); if(!u) return alert('Not found');
+  alert('Short: '+u.short+'\nTarget: '+u.target+'\nTotal views: '+u.views+'\nBy country: '+JSON.stringify(u.byCountry));
+}
+function renderEvents(){
+  const el = document.getElementById('events'); el.innerHTML='';
+  state.events.slice(0,200).forEach(e=>{
+    const d = document.createElement('div'); d.style.padding='6px'; d.style.borderBottom='1px solid rgba(255,255,255,0.02)';
+    d.innerHTML = `<div style="font-size:12px">${new Date(e.time).toLocaleString()} — ${CNAME[e.country]} — ${e.ip}</div><div class="small">Hit: ${e.short} → ${e.target}</div>`;
+    el.appendChild(d);
+  });
+}
+
+// generate campaign
+document.getElementById('genBtn').addEventListener('click', ()=>{
+  const target = document.getElementById('target').value.trim(); if(!target) return alert('Paste target URL first');
+  const id = 'camp_'+Date.now().toString(36);
+  const short = window.location.origin + shortPath() + '_' + id;
+  const obj = {id:id,short:short,target:target,views:0,byCountry:{}};
+  state.urls.push(obj); state.currentCampaignId = id;
+  document.getElementById('genInfo').innerText = 'Generated: ' + short;
+  updateOverview(); renderURLs();
+  document.getElementById('exportBtn').style.display = 'inline-block';
+});
+
+// start simulation
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  if(!state.urls.length) return alert('Generate campaign first');
+  if(state.running) return alert('Already running');
+  const dur = Math.max(1, parseInt(document.getElementById('duration').value)||60);
+  const vpm = Math.max(1, parseInt(document.getElementById('vpm').value)||10);
+  const totalPlanned = dur * vpm;
+
+  // collect allocations
+  const allocInputs = Array.from(document.querySelectorAll('#countryAlloc input'));
+  const alloc = {}; let allocSum = 0;
+  allocInputs.forEach(i=>{ const v = Math.max(0,parseInt(i.value)||0); alloc[i.dataset.cc]=v; allocSum+=v; });
+
+  // create plan per country
+  const plan = {};
+  if(allocSum>0){
+    COUNTRIES.forEach(cc=> plan[cc] = Math.round((alloc[cc]||0)/allocSum * totalPlanned));
+  } else {
+    // no allocation => random distribution initially zero; we'll fill remainder later
+    COUNTRIES.forEach(cc=> plan[cc]=0);
+  }
+  // fill remainder
+  let assigned = Object.values(plan).reduce((a,b)=>a+b,0);
+  while(assigned < totalPlanned){
+    const idx = randInt(0,COUNTRIES.length-1);
+    plan[COUNTRIES[idx]] = (plan[COUNTRIES[idx]]||0)+1; assigned++;
+  }
+
+  // choose last generated campaign as active
+  const active = state.urls[state.urls.length-1];
+  active.plan = Object.assign({},plan);
+  active.byCountry = active.byCountry || {};
+  // start fast simulation: 1 second = 1 minute
+  let minute = 0; state.running = true; document.getElementById('stopBtn').style.display='inline-block'; document.getElementById('startBtn').style.display='none';
+
+  state.interval = setInterval(()=>{
+    if(minute >= dur){ stopSim(); return; }
+    // generate vpm events this minute
+    for(let i=0;i<vpm;i++){
+      // select country with remaining quota
+      const available = COUNTRIES.filter(cc=> (active.plan[cc]||0) > (active.byCountry[cc]||0));
+      const chosen = available.length ? available[randInt(0,available.length-1)] : COUNTRIES[randInt(0,COUNTRIES.length-1)];
+      const ip = genIP(chosen);
+      const ev = {time:new Date().toISOString(),country:chosen,ip:ip,short:active.short,target:active.target};
+      state.events.unshift(ev);
+      state.total += 1;
+      state.globalCounts[chosen] = (state.globalCounts[chosen]||0) + 1;
+      state.lastIp = state.lastIp || {}; state.lastIp[chosen] = ip;
+      active.views = (active.views||0) + 1;
+      active.byCountry[chosen] = (active.byCountry[chosen]||0) + 1;
+    }
+    minute++;
+    updateOverview(); renderCountryTable(); renderURLs(); renderEvents();
+  }, 1000);
+});
+
+// stop
+document.getElementById('stopBtn').addEventListener('click', stopSim);
+function stopSim(){
+  if(state.interval) clearInterval(state.interval);
+  state.running = false; state.interval = null;
+  document.getElementById('stopBtn').style.display='none'; document.getElementById('startBtn').style.display='inline-block';
+  alert('Simulation stopped (local simulation only).');
+}
+
+// export CSV
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  if(!state.events.length) return alert('No events to export');
+  const hdr = ['id','time','country','ip','short','target'];
+  const rows = [hdr.join(',')];
+  state.events.slice().reverse().forEach((e,i)=>{
+    const line = [i+1, `"${e.time}"`, `"${CNAME[e.country]}"`, e.ip, `"${e.short}"`, `"${e.target}"`].join(',');
+    rows.push(line);
+  });
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='sim_events.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
+
+// initial rendering
+updateOverview(); renderCountryTable(); renderURLs(); renderEvents();
+</script>
+</body>
+</html>      <label>Choose visits per hour (number)</label>
       <input id="visitsPerHour" type="number" min="1" value="10" />
       <div class="small">Har ek ghante ke liye yeh visits generate honge (simulation)</div>
     </div>
